@@ -8,15 +8,16 @@
 
 ## Overview
 
-This project is a two-part processor design simulation built in Python.
+This project is a three-part processor design simulation built in Python.
 The goal is to understand how a processor handles data and makes decisions
-at the hardware level — from raw number representation all the way down
-to combinational logic design.
+at the hardware level — from raw number representation and combinational
+logic design all the way up to memory hierarchy simulation.
 
-Both tasks are connected to the same IoT use case: a Smart Temperature
+All tasks are connected to the same IoT use case: a Smart Temperature
 Sensor Node. Task 1 handles how the sensor's data gets validated and
 represented internally. Task 2 handles the logic design that would live
-inside the chip itself.
+inside the chip itself. Task 3 models the full memory subsystem that
+feeds instructions to the CPU.
 
 ---
 
@@ -31,6 +32,12 @@ processor-design-project/
 │   ├── kmap.py
 │   ├── validator.py
 │   └── utils.py
+├── task3/
+│   ├── task3_eden_mckenzie.py
+│   ├── config.py
+│   ├── memory_level.py
+│   ├── hierarchy.py
+│   └── output.py
 ├── visuals/
 │   └── (worksheets and diagrams)
 └── README.md
@@ -119,6 +126,58 @@ Validation Result: PASS
 
 ---
 
+---
+
+## Task 3 — Memory Hierarchy Simulation (SSD → DRAM → Cache → CPU)
+
+Task 3 models the memory subsystem of the processor. Instructions must
+travel through the full hierarchy — no skipping levels. This is how a
+real CPU is fed data in hardware.
+
+The simulator uses a clock-driven model. Each transfer between levels
+costs clock cycles (student-defined latency). An LRU replacement policy
+handles cache evictions, and evicted blocks are written back down the
+chain (write-back policy).
+
+**How to run:**
+```bash
+python3 task3/task3_eden_mckenzie.py
+```
+
+Choose **1** for a pre-built demo, or **2** for interactive mode where
+you configure the hierarchy, load instructions, and issue your own`read` / `write` commands.
+
+**Features:**
+- Five memory levels: SSD, DRAM, L3, L2, L1
+- Configurable capacity per level (in 32-bit instructions)
+- Enforced hierarchy: SSD > DRAM > L3 > L2 > L1
+- Clock-driven model with per-transfer latency
+- Strict no-skip data flow: SSD → DRAM → L3 → L2 → L1 → CPU
+- Read: miss propagates down until found, loads back through all levels
+- Write: write-back with write-allocate, evictions propagate downward
+- LRU cache replacement policy (bonus)
+- Full access trace with cycle timestamps
+- Cache hit / miss statistics per level
+- Final state dump for every memory level
+
+**Example output (abridged):**
+```
+[Cycle     0] READ  addr=0x00000000
+[Cycle     0]   L1 MISS
+[Cycle     0]   L2 MISS
+[Cycle     0]   L3 MISS
+[Cycle     0]   DRAM MISS
+[Cycle     0]   SSD HIT  → val=0xa0010001
+[Cycle    10]   SSD → DRAM | addr=0x00000000 val=0xa0010001 | latency=10 cycles
+...
+[Cycle    84] READ  addr=0x00000000
+[Cycle    85]   L1 HIT  → val=0xa0010001 | total latency=1 cycle
+
+Cache hit rate — L1: 30.8%  |  Total cycles: 186
+```
+
+---
+
 ## Visuals
 
 The `visuals/` folder contains hand-drawn worksheets showing the full
@@ -141,9 +200,12 @@ python3 task1/task1_eden_mckenzie.py
 
 # Run Task 2
 python3 task2/task2_eden_mckenzie.py
+
+# Run Task 3
+python3 task3/task3_eden_mckenzie.py
 ```
 
-No external libraries needed. Both programs run on standard Python 3.
+No external libraries needed. All programs run on standard Python 3.
 
 ---
 
