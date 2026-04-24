@@ -8,16 +8,17 @@
 
 ## Overview
 
-This project is a three-part processor design simulation built in Python.
+This project is a four-part processor design simulation built in Python.
 The goal is to understand how a processor handles data and makes decisions
 at the hardware level — from raw number representation and combinational
-logic design all the way up to memory hierarchy simulation.
+logic design all the way up to a working single-cycle CPU.
 
 All tasks are connected to the same IoT use case: a Smart Temperature
 Sensor Node. Task 1 handles how the sensor's data gets validated and
 represented internally. Task 2 handles the logic design that would live
 inside the chip itself. Task 3 models the full memory subsystem that
-feeds instructions to the CPU.
+feeds instructions to the CPU. Task 4 puts it all together as a working
+single-cycle processor that executes real instructions.
 
 ---
 
@@ -38,6 +39,13 @@ processor-design-project/
 │   ├── memory_level.py
 │   ├── hierarchy.py
 │   └── output.py
+├── task4/
+│   ├── task4_eden_mckenzie.py
+│   ├── register_file.py
+│   ├── alu.py
+│   ├── mux.py
+│   ├── control_unit.py
+│   └── datapath.py
 ├── visuals/
 │   └── (worksheets and diagrams)
 └── README.md
@@ -178,6 +186,67 @@ Cache hit rate — L1: 30.8%  |  Total cycles: 186
 
 ---
 
+## Task 4 — Single-Cycle Processor (AND / OR)
+
+Task 4 is a working single-cycle 32-bit processor. It executes a three-instruction
+program to evaluate the Boolean expression `Y = A·B + C'·D`. The full datapath —
+register file, ALU, multiplexers, control unit — is built from scratch and wired
+together so each instruction completes Fetch → Decode → Execute → Write-back
+in one cycle.
+
+NOT is not a separate instruction. Instead, the control unit sets an inversion flag
+in the function field of the instruction word, and a MUX in front of ALU input A
+flips the operand before the operation runs.
+
+**How to run:**
+```bash
+cd task4
+python3 task4_eden_mckenzie.py
+```
+
+Choose **1** for interactive mode (enter your own A, B, C, D values and see the
+full execution trace), or **2** for demo mode (runs all 16 input combinations and
+prints the truth table results).
+
+**Files (one per datapath stage):**
+
+| File | Stage | Role |
+|---|---|---|
+| `register_file.py` | Stage 1 | 32-bit register file, 2 read ports, 1 write port |
+| `alu.py` | Stage 2 | ALU — AND / OR with optional input inversion |
+| `mux.py` | Stage 3 | Generic N-input MUX used to route the inversion signal |
+| `control_unit.py` | Stage 4 | Decodes instruction word, generates control signals |
+| `datapath.py` | Stage 5 | Wires all stages together, runs single-cycle execution |
+
+**The program it executes:**
+```
+and t4, t0, t1   ; t4 = A & B
+and t6, t5, t3   ; t6 = (~C) & D   (invert_a flag set in function field)
+or  t0, t4, t6   ; t0 = Y
+```
+
+**Example output (A=1, B=1, C=0, D=1):**
+```
+Cycle 1: and t4, t0, t1   ; t4 = A & B
+  Control signals : alu_op=AND, reg_write=True
+  Operands        : t0 = 1 (0x00000001),  t1 = 1 (0x00000001)
+  Result          : t4 <- 1 (0x00000001)
+
+Cycle 2: and t6, t5, t3   ; t6 = (~C) & D
+  Control signals : alu_op=AND [invert_a=1], reg_write=True
+  Operands        : t5' = 0 (0x00000000),  t3 = 1 (0x00000001)
+  Result          : t6 <- 1 (0x00000001)
+
+Cycle 3: or  t0, t4, t6   ; t0 = Y
+  Control signals : alu_op=OR, reg_write=True
+  Operands        : t4 = 1 (0x00000001),  t6 = 1 (0x00000001)
+  Result          : t0 <- 1 (0x00000001)
+
+  t4 (A & B)  = 1    t6 (~C & D) = 1    Y = 1   PASS
+```
+
+---
+
 ## Visuals
 
 The `visuals/` folder contains hand-drawn worksheets showing the full
@@ -203,6 +272,10 @@ python3 task2/task2_eden_mckenzie.py
 
 # Run Task 3
 python3 task3/task3_eden_mckenzie.py
+
+# Run Task 4 (run from inside task4/ so imports resolve)
+cd task4
+python3 task4_eden_mckenzie.py
 ```
 
 No external libraries needed. All programs run on standard Python 3.
